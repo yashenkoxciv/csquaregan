@@ -1,0 +1,20 @@
+image_dir: /mnt/fileserver/shared/datasets/KP_Market-1501-v15.09.15/bounding_box_train
+test_image_dir: /mnt/fileserver/shared/datasets/KP_Market-1501-v15.09.15/bounding_box_test
+image_format: "*.jpg"
+session_name: v2
+
+cuda: True
+epochs: 500
+batch_size: 16
+
+patch_w: 32
+patch_h: 32
+
+i_lr: 0.0001
+i_adam_b1: 0.5
+i_adam_b2: 0.999
+
+gp_lambda: 10
+
+lambda_idt_i: 20.0
+lambda_idt_k: 12.0
