@@ -48,11 +48,11 @@ else:
         logger.success('Current device is', device)
 
 # network definition
-ik2i = Generator(in_channels=4, out_channels=3).to(device).train()
-i2k = Generator(in_channels=3, out_channels=1).to(device).train()
+ik2i = Generator(in_channels=81, out_channels=3).to(device).train()
+i2k = Generator(in_channels=3, out_channels=78).to(device).train()
 
-i_disc = PatchDiscriminator(channels=7).to(device).train()
-k_disc = PatchDiscriminator(channels=4).to(device).train()
+i_disc = PatchDiscriminator(channels=84).to(device).train()
+k_disc = PatchDiscriminator(channels=81).to(device).train()
 
 logger.info(
     '<image, kp> -> <image> network has',
@@ -143,12 +143,13 @@ for epoch in range(1, config.epochs + 1):
         i_dx_real = extract_patches_2d(
             torch.cat([img2, img1, kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 7, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3+3, config.patch_h, config.patch_w))
         i_dx_fake = extract_patches_2d(
             torch.cat([g_img2, img1, kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 7, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3+3, config.patch_h, config.patch_w))
         
+        #import ipdb; ipdb.set_trace()
         # discriminate image triplets
         i_disc_loss_real = i_disc(i_dx_real).mean()*0.5
         i_disc_loss_real.backward(mone, retain_graph=True)
@@ -177,7 +178,7 @@ for epoch in range(1, config.epochs + 1):
         i_dx_fake = extract_patches_2d(
             torch.cat([g_img2, img1, kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 7, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3+3, config.patch_h, config.patch_w))
         
         i_ik2i_loss = i_disc(i_dx_fake).mean()
         i_ik2i_loss.backward(mone, retain_graph=True)
@@ -207,11 +208,11 @@ for epoch in range(1, config.epochs + 1):
         k_dx_real = extract_patches_2d(
             torch.cat([g_img2, kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 4, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3, config.patch_h, config.patch_w))
         k_dx_fake = extract_patches_2d(
             torch.cat([g_img2, g_kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 4, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3, config.patch_h, config.patch_w))
         
         # discriminate image triplets
         k_disc_loss_real = k_disc(k_dx_real).mean()*0.5
@@ -243,7 +244,7 @@ for epoch in range(1, config.epochs + 1):
         k_dx_fake = extract_patches_2d(
             torch.cat([g_img2, g_kp2], 1),
             patch_shape=(config.patch_h, config.patch_w),
-            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 4, config.patch_h, config.patch_w))
+            step=[config.patch_h, config.patch_w], batch_first=True).reshape((-1, 78+3, config.patch_h, config.patch_w))
         
         k_i2k_loss = k_disc(k_dx_fake).mean()
         k_i2k_loss.backward(mone, retain_graph=True)
@@ -277,18 +278,23 @@ for epoch in range(1, config.epochs + 1):
     for i in range(test_g_img2.shape[0]):
         test_g_img2_np = test_g_img2[i].detach().cpu().numpy().transpose(1, 2, 0)
         test_g_img1_np = test_g_img1[i].detach().cpu().numpy().transpose(1, 2, 0)
-        test_g_kp2_np = np.repeat(test_g_kp2[i].detach().cpu().numpy().transpose(1, 2, 0), 3, 2)
-        test_g_kp1_np = np.repeat(test_g_kp1[i].detach().cpu().numpy().transpose(1, 2, 0), 3, 2)
+        #test_g_kp2_np = np.repeat(test_g_kp2[i].detach().cpu().numpy().transpose(1, 2, 0), 3, 2)
+        test_g_kp2_np = np.repeat(test_g_kp2[i].detach().cpu().numpy().transpose(1, 2, 0).mean(2)[:, :, np.newaxis], 3, 2)
+        test_g_kp1_np = np.repeat(test_g_kp1[i].detach().cpu().numpy().transpose(1, 2, 0).mean(2)[:, :, np.newaxis], 3, 2)
 
         test_source = np.concatenate([
             test_img1[i].detach().cpu().numpy().transpose(1, 2, 0),
-            np.repeat(test_kp1[i].detach().cpu().numpy().transpose(1, 2, 0), 3, 2),
+            np.repeat(test_kp1[i].detach().cpu().numpy().transpose(1, 2, 0).mean(2)[:, :, np.newaxis], 3, 2),
             test_img2[i].detach().cpu().numpy().transpose(1, 2, 0),
-            np.repeat(test_kp2[i].detach().cpu().numpy().transpose(1, 2, 0), 3, 2)
+            np.repeat(test_kp2[i].detach().cpu().numpy().transpose(1, 2, 0).mean(2)[:, :, np.newaxis], 3, 2)
         ], 1)
         test_generated = np.concatenate([test_g_img1_np, test_g_kp1_np, test_g_img2_np, test_g_kp2_np], 1)
         test_vis = np.concatenate([test_source, test_generated], 0)
 
         plt.imsave(os.path.join(config.session_name, '{0:03d}'.format(epoch), '{0:03d}.png'.format(i)), test_vis)
     # visualizing
+torch.save(ik2i.state_dict(), 'ik2i.pth')
+torch.save(i2k.state_dict(), 'i2k.pth')
+torch.save(k_disc.state_dict(), 'k_disc.pth')
+torch.save(i_disc.state_dict(), 'i_disc.pth')
 #import ipdb; ipdb.set_trace()

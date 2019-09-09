@@ -47,10 +47,12 @@ class Dataset(data.Dataset):
         name1, name2 = np.random.choice(self.idx2images[self.idxs[index]], 2, False)
 
         i1 = np.array(io.imread(os.path.join(self.image_dir, name1)))
-        k1 = np.array(io.imread(os.path.join(self.kps_dir, name1)))
+        #k1 = np.array(io.imread(os.path.join(self.kps_dir, name1)))
+        k1 = np.load(os.path.join(self.kps_dir, name1.split('.')[0] + '.npy'))
 
         i2 = np.array(io.imread(os.path.join(self.image_dir, name2)))
-        k2 = np.array(io.imread(os.path.join(self.kps_dir, name2)))
+        #k2 = np.array(io.imread(os.path.join(self.kps_dir, name2)))
+        k2 = np.load(os.path.join(self.kps_dir, name2.split('.')[0] + '.npy'))
 
         if self.transform:
             i1 = self.transform(i1)
